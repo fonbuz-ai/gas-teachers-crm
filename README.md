@@ -9,7 +9,7 @@
 > *   安裝器與選單初始化邏輯：**已實作 (IMPLEMENTED)** (尚未在 Apps Script 真實線上環境中驗證)。
 
 > [!WARNING]
-> 本專案只應版本控制程式碼、規格與完全虛構的測試資料。請勿提交真實學生／家庭資料、`.clasp.json`、憑證、Spreadsheet ID、Folder ID 或部署網址。首次上傳建議先建立 **Private repository**，完成權限與授權選擇後再評估是否公開。
+> 本專案只應版本控制程式碼、規格與完全虛構的測試資料。請勿提交真實學生／家庭資料、`.clasp.json`、憑證、Spreadsheet ID、Folder ID 或部署網址。首次上傳建議先建立 **Private repository**，完成權限與安全測試後再評估是否公開。
 
 ---
 
@@ -126,4 +126,8 @@ git diff --exit-code -- dist/ClassCareInstaller.gs
 - 安全問題請依 [`SECURITY.md`](SECURITY.md) 私密回報；貢獻流程請見 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
 - Web App 部署範圍必須限制為機構內成員、指定使用者或僅自己，禁止公開存取。
 
-目前尚未選定開源授權。若要將儲存庫設為 Public 或允許外部重用，請由專案擁有者先決定並加入合適的 `LICENSE`；在此之前不得假設程式碼已授權公開重製。
+---
+
+## 7. 授權
+
+本專案採用 [MIT License](LICENSE)，Copyright (c) 2026 mihozip。
