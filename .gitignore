@@ -1,0 +1,36 @@
+# Operating systems and editors
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Python build and test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local logs and temporary files
+*.log
+tmp/
+temp/
+
+# Local product screenshots may contain account or student information.
+# Redact approved public assets and place them under docs/images instead.
+/*.png
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+.clasp.json
+.clasprc.json
+credentials*.json
+client_secret*.json
+service-account*.json
+
+# Keep dist/ClassCareInstaller.gs under version control. It is the documented
+# single-file release artifact generated from the multi-file source by build.py.

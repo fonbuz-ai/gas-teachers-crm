@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ClassCare 系統狀態</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 15px;
+      background-color: #f8f9fa;
+      color: #3c4043;
+      font-size: 13px;
+    }
+    .status-container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      height: 93%;
+    }
+    h2 {
+      margin-top: 0;
+      color: #1a73e8;
+      border-bottom: 2px solid #e8f0fe;
+      padding-bottom: 8px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    .info-card {
+      background: #f8f9fa;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      padding: 12px;
+    }
+    .info-card h4 {
+      margin: 0 0 8px 0;
+      color: #5f6368;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .info-card p {
+      margin: 4px 0;
+      font-size: 13px;
+    }
+    .sheet-list {
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 15px;
+      flex-grow: 1;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #dadce0;
+      text-align: left;
+    }
+    th {
+      background: #f1f3f4;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-ok {
+      background: #e6f4ea;
+      color: #137333;
+    }
+    .badge-error {
+      background: #fce8e6;
+      color: #c5221f;
+    }
+    .msg-box {
+      padding: 10px 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .msg-error {
+      background: #fce8e6;
+      border-left: 4px solid #d93025;
+      color: #a51d24;
+    }
+    .msg-warning {
+      background: #fef7e0;
+      border-left: 4px solid #fbbc05;
+      color: #b06000;
+    }
+    .btn-bar {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: auto;
+    }
+    button {
+      padding: 8px 20px;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    button:hover {
+      background: #1557b0;
+    }
+    .loader {
+      text-align: center;
+      padding: 30px;
+      color: #5f6368;
+    }
+  </style>
+</head>
+<body>
+  <div class="status-container">
+    <h2>ClassCare 系統狀態校對</h2>
+
+    <div id="loader" class="loader">正在讀取系統狀態與健康指標，請稍候...</div>
+
+    <div id="content" style="display:none;">
+      <div class="info-grid">
+        <div class="info-card">
+          <h4>系統與試算表</h4>
+          <p><strong>系統版本：</strong> V<span id="sys-version">--</span></p>
+          <p><strong>架構版本：</strong> <span id="schema-version">--</span></p>
+          <p><strong>試算表名稱：</strong> <span id="ss-name">--</span></p>
+        </div>
+        <div class="info-card">
+          <h4>環境與管理</h4>
+          <p><strong>啟用中管理員 (ADMIN)：</strong> <span id="admin-count">--</span> 人</p>
+          <p><strong>雲端資料夾設定：</strong> <span id="folder-status">--</span></p>
+          <p><strong>測試示範資料：</strong> <span id="demo-status">--</span></p>
+        </div>
+      </div>
+
+      <div id="error-box" class="msg-box msg-error" style="display:none;">
+        <strong>發現錯誤限制：</strong>
+        <ul id="error-list" style="margin: 5px 0 0 0; padding-left: 20px;"></ul>
+      </div>
+
+      <div id="warning-box" class="msg-box msg-warning" style="display:none;">
+        <strong>環境警示項目：</strong>
+        <ul id="warning-list" style="margin: 5px 0 0 0; padding-left: 20px;"></ul>
+      </div>
+
+      <h4>工作表結構檢查：</h4>
+      <div class="sheet-list">
+        <table>
+          <thead>
+            <tr>
+              <th>工作表名稱 (Sheet Name)</th>
+              <th style="width: 100px;">校對狀態</th>
+            </tr>
+          </thead>
+          <tbody id="sheet-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="btn-bar">
+      <button onclick="google.script.host.close()">關閉視窗</button>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      google.script.run
+        .withSuccessHandler(renderStatus)
+        .withFailureHandler(renderFailure)
+        .ajaxGetSystemStatus();
+    };
+
+    function renderStatus(res) {
+      document.getElementById('loader').style.display = 'none';
+
+      if (!res.success) {
+        renderFailure(res);
+        return;
+      }
+
+      const d = res.data;
+      document.getElementById('sys-version').innerText = d.version;
+      document.getElementById('schema-version').innerText = d.schemaVersion;
+      document.getElementById('ss-name').innerText = d.spreadsheetName;
+      document.getElementById('admin-count').innerText = d.adminCount;
+      document.getElementById('folder-status').innerHTML = d.driveFolderSet ?
+        '<span style="color:#137333; font-weight:bold;">🟢 已設定連線</span>' :
+        '<span style="color:#c5221f; font-weight:bold;">🔴 未設定或權限不足</span>';
+      document.getElementById('demo-status').innerText = d.demoDataSeeded ? '已寫入' : '無';
+
+      // Render Errors list
+      if (d.errors && d.errors.length > 0) {
+        const errorList = document.getElementById('error-list');
+        errorList.innerHTML = "";
+        d.errors.forEach(err => {
+          const li = document.createElement('li');
+          li.innerText = err;
+          errorList.appendChild(li);
+        });
+        document.getElementById('error-box').style.display = 'block';
+      }
+
+      // Render Warnings list
+      if (d.warnings && d.warnings.length > 0) {
+        const warningList = document.getElementById('warning-list');
+        warningList.innerHTML = "";
+        d.warnings.forEach(warn => {
+          const li = document.createElement('li');
+          li.innerText = warn;
+          warningList.appendChild(li);
+        });
+        document.getElementById('warning-box').style.display = 'block';
+      }
+
+      // Render Sheet Table
+      const tbody = document.getElementById('sheet-tbody');
+      tbody.innerHTML = "";
+      for (let sName in d.sheetStatus) {
+        const tr = document.createElement('tr');
+        const status = d.sheetStatus[sName];
+        const badge = status ?
+          '<span class="badge badge-ok">🟢 正常 (OK)</span>' :
+          '<span class="badge badge-error">🔴 異常 (FAIL)</span>';
+
+        tr.innerHTML = `
+          <td><code>\${escapeHtml(sName)}</code></td>
+          <td>\${badge}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      document.getElementById('content').style.display = 'block';
+    }
+
+    function renderFailure(err) {
+      document.getElementById('loader').style.display = 'none';
+      const tbody = document.getElementById('sheet-tbody');
+      tbody.innerHTML = `<tr><td colspan="2" style="color:#c5221f; text-align:center; padding:20px; font-weight:bold;">無法取得狀態：\${escapeHtml(err.message || '未知錯誤')}</td></tr>`;
+      document.getElementById('content').style.display = 'block';
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>

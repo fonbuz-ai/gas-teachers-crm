@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ClassCare 班級轉銜與學生理解工作台</title>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; margin:0; padding:0; background:#f4f6f9; color:#333; font-size:14px; }
+    .header { background:#1a73e8; color:white; padding:12px 20px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+    .header h1 { font-size:18px; margin:0; }
+    .user-info { font-size:12px; opacity:0.9; text-align:right; }
+    .container { max-width:1200px; margin:20px auto; padding:0 20px; }
+    .toolbar { background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:20px; display:flex; gap:15px; align-items:center; flex-wrap:wrap; }
+    .select-input, .text-input { padding:8px 12px; border:1px solid #dadce0; border-radius:4px; font-size:13px; outline:none; }
+    .select-input { cursor:pointer; }
+    .text-input { flex-grow:1; max-width:300px; }
+
+    .student-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap:20px; }
+    .student-card { background:white; border-radius:8px; padding:15px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border:1px solid #e0e0e0; display:flex; flex-direction:column; justify-content:space-between; transition:transform 0.2s, box-shadow 0.2s; }
+    .student-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.1); }
+    .card-header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f0f0f0; padding-bottom:8px; margin-bottom:10px; }
+    .seat-badge { background:#e8f0fe; color:#1a73e8; font-weight:bold; font-size:12px; padding:2px 8px; border-radius:12px; }
+    .student-name { font-size:16px; font-weight:bold; margin:0; }
+    .card-body p { margin:6px 0; font-size:13px; color:#5f6368; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; }
+    .card-body strong { color:#333; }
+    .badge-container { display:flex; gap:5px; margin-top:10px; flex-wrap:wrap; }
+    .badge { font-size:11px; padding:2px 6px; border-radius:4px; font-weight:600; }
+    .badge-task { background:#e8f0fe; color:#1967d2; }
+    .badge-alert { background:#fce8e6; color:#c5221f; }
+    .badge-subsidy { background:#fef7e0; color:#b06000; }
+    .btn-view { display:block; width:100%; text-align:center; padding:8px 0; background:#1a73e8; color:white; border:none; border-radius:4px; font-weight:600; text-decoration:none; margin-top:15px; cursor:pointer; font-size:13px; }
+    .btn-view:hover { background:#1557b0; }
+
+    .detail-view { display:none; background:white; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); overflow:hidden; }
+    .detail-header { background:#f8f9fa; padding:15px 20px; border-bottom:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center; }
+    .detail-tabs { display:flex; background:#f1f3f4; border-bottom:1px solid #e0e0e0; overflow-x:auto; }
+    .tab-btn { padding:12px 20px; border:none; background:none; cursor:pointer; font-weight:600; font-size:13px; color:#5f6368; outline:none; border-bottom:3px solid transparent; white-space:nowrap; }
+    .tab-btn.active { color:#1a73e8; border-bottom-color:#1a73e8; background:white; }
+    .tab-content { padding:25px; display:none; min-height:400px; max-height: 520px; overflow-y: auto; }
+    .tab-content.active { display:block; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .info-card { background:#f8f9fa; padding:15px; border-radius:6px; border-left:4px solid #1a73e8; margin-bottom:15px; }
+    .info-card h4 { margin:0 0 8px 0; color:#1a73e8; font-size:14px; }
+    .info-card p { margin:4px 0; font-size:13px; line-height:1.5; }
+    .btn-back { background:#e8eaed; color:#3c4043; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:600; }
+    .btn-back:hover { background:#dadce0; }
+
+    .timeline { border-left: 2px solid #e8eaed; padding-left: 15px; margin-left: 10px; }
+    .timeline-item { position: relative; margin-bottom: 20px; }
+    .timeline-item::before { content: ''; position: absolute; left: -21px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: #1a73e8; }
+    .timeline-date { font-size: 11px; color: #5f6368; font-weight: bold; }
+    .timeline-title { font-weight: bold; margin: 3px 0; font-size:13px; }
+    .timeline-desc { font-size: 12px; color: #3c4043; line-height:1.4; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 id="title-banner">ClassCare 班級轉銜與學生理解工作台</h1>
+    <div class="user-info">
+      <div id="username-display">載入中...</div>
+      <div id="email-display">載入中...</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="list-state">
+      <div class="toolbar">
+        <select class="select-input" id="classSelect" onchange="loadStudentsForClass(this.value)">
+          <option value="">讀取班級中...</option>
+        </select>
+        <select class="select-input" id="filterSelect" onchange="loadStudentsForClass(document.getElementById('classSelect').value)">
+          <option value="全部">全部學生</option>
+          <option value="建議優先認識">建議優先認識</option>
+          <option value="家庭資料待確認">家庭資料待確認</option>
+          <option value="學習支持">學習支持</option>
+          <option value="情緒與適應">情緒與適應</option>
+          <option value="尚有追蹤事項">尚有追蹤事項</option>
+          <option value="健康或行政提醒">健康或行政提醒</option>
+        </select>
+        <input type="text" class="text-input" id="search-input" placeholder="搜尋學生姓名或座號..." oninput="filterCards()">
+        <span style="font-size:12px; color:#5f6368; margin-left:auto;">
+          班級人數：<strong id="studentCount">0</strong> 人
+        </span>
+      </div>
+
+      <div id="workspaceMessage" role="status" style="margin:12px 0;color:#b3261e;font-weight:600;"></div>
+
+      <div class="student-grid" id="student-container"></div>
+      <div id="no-classes-error" style="display:none; text-align:center; padding:40px; background:white; border-radius:8px;">
+        <p style="color:#d93025; font-size:16px; font-weight:bold;" id="error-message-text">目前沒有可存取的班級，請聯絡系統管理員確認權限。</p>
+      </div>
+    </div>
+
+    <div class="detail-view" id="detail-state">
+      <div class="detail-header">
+        <div>
+          <span class="seat-badge" id="detail-seat">座號 --</span>
+          <strong style="font-size:20px; margin-left:10px;" id="detail-name">學生姓名</strong>
+          <span style="font-size:13px; color:#5f6368; margin-left:10px;" id="detail-class-info">--</span>
+        </div>
+        <button class="btn-back" onclick="backToList()">返回學生清單</button>
+      </div>
+
+      <div class="detail-tabs">
+        <button class="tab-btn active" onclick="switchTab('quicklook', this)">1. 速覽</button>
+        <button class="tab-btn" onclick="switchTab('learning', this)">2. 個性與學習</button>
+        <button class="tab-btn" onclick="switchTab('family', this)">3. 家庭與聯絡</button>
+        <button class="tab-btn" onclick="switchTab('strategies', this)">4. 支持策略</button>
+        <button class="tab-btn" onclick="switchTab('transition', this)">5. 重要事件與轉銜</button>
+        <button class="tab-btn" onclick="switchTab('contact', this)">6. 親師聯絡</button>
+        <button class="tab-btn" onclick="switchTab('tasks', this)">7. 追蹤事項</button>
+        <button class="tab-btn" onclick="switchTab('alerts', this)">8. 健康與行政提醒</button>
+      </div>
+
+      <!-- Tab Content 1: Quicklook -->
+      <div class="tab-content active" id="tab-quicklook">
+        <div class="grid-2">
+          <div>
+            <div class="info-card">
+              <h4>孩子特質與學習優勢</h4>
+              <p><strong>個性摘要：</strong><span id="quick-personality">讀取中...</span></p>
+              <p><strong>學習優勢：</strong><span id="quick-strengths">讀取中...</span></p>
+            </div>
+            <div class="info-card">
+              <h4>當前支持重點</h4>
+              <p id="quick-support">讀取中...</p>
+            </div>
+          </div>
+          <div>
+            <div class="info-card">
+              <h4>家庭聯絡摘要</h4>
+              <div id="quick-family">讀取中...</div>
+            </div>
+            <div class="info-card">
+              <h4>待辦追蹤與重要提醒</h4>
+              <p><strong>未完成追蹤數量：</strong><span id="quick-tasks-count">0</span> 筆</p>
+              <p><strong>健康行動提醒：</strong><span id="quick-health-alert">無</span></p>
+              <p><strong>補助處理提醒：</strong><span id="quick-subsidy-alert">無</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 2: Learning -->
+      <div class="tab-content" id="tab-learning">
+        <div class="info-card">
+          <h4>學生特質與學習習慣</h4>
+          <p><strong>學習優勢與興趣：</strong><span id="learn-strengths">載入中...</span></p>
+          <p><strong>學習需求與困難：</strong><span id="learn-needs">載入中...</span></p>
+          <p><strong>情緒適應：</strong><span id="learn-emotional">載入中...</span></p>
+          <p><strong>同儕互動：</strong><span id="learn-peer">載入中...</span></p>
+        </div>
+        <div style="font-size:12px; color:#5f6368; padding:5px 15px;">
+          資料來源：<span id="learn-source">--</span> | 狀態：<span id="learn-status">--</span> | 有效截止日：<span id="learn-period">--</span>
+        </div>
+      </div>
+
+      <!-- Tab Content 3: Family -->
+      <div class="tab-content" id="tab-family">
+        <div id="family-container"></div>
+      </div>
+
+      <!-- Tab Content 4: Strategies -->
+      <div class="tab-content" id="tab-strategies">
+        <div class="info-card" style="border-left-color: #34a853;">
+          <h4>前任導師推薦有效策略</h4>
+          <p><strong>建議採行策略 (Do's)：</strong><br/><span id="strat-effective">載入中...</span></p>
+        </div>
+        <div class="info-card" style="border-left-color: #ea4335;">
+          <h4>應避免策略 (Don'ts)</h4>
+          <p><strong>避免採行方式 (Don'ts)：</strong><br/><span id="strat-avoid">載入中...</span></p>
+        </div>
+        <div class="info-card">
+          <h4>轉銜重點備忘</h4>
+          <p id="strat-transition">載入中...</p>
+        </div>
+      </div>
+
+      <!-- Tab Content 5: Transition -->
+      <div class="tab-content" id="tab-transition">
+        <div class="info-card">
+          <h4>學校轉銜注意事項</h4>
+          <p id="trans-notes">載入中...</p>
+        </div>
+        <div class="info-card">
+          <h4>進行中的轉銜任務與重要事件</h4>
+          <ul id="trans-events"></ul>
+        </div>
+      </div>
+
+      <!-- Tab Content 6: Contact -->
+      <div class="tab-content" id="tab-contact">
+        <div class="timeline" id="contact-timeline"></div>
+      </div>
+
+      <!-- Tab Content 7: Tasks -->
+      <div class="tab-content" id="tab-tasks">
+        <div class="grid-2">
+          <div>
+            <h4 style="color:#c5221f;">未處理 (TODO)</h4>
+            <div id="tasks-todo"></div>
+          </div>
+          <div>
+            <h4 style="color:#1a73e8;">已完成 (COMPLETED)</h4>
+            <div id="tasks-completed"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 8: Alerts -->
+      <div class="tab-content" id="tab-alerts">
+        <div class="grid-2">
+
+          <div class="info-card" style="border-left-color:#ea4335;">
+            <h4>健康照護行動提醒</h4>
+            <p>
+              <strong>警示等級：</strong>
+              <span id="alert-health-level">--</span>
+            </p>
+            <p>
+              <strong>導師照護摘要：</strong>
+              <span id="alert-health-summary">--</span>
+            </p>
+            <p>
+              <strong>第一時間處置：</strong>
+              <span id="alert-health-action">--</span>
+            </p>
+            <p>
+              <strong>體育活動限制：</strong>
+              <span id="alert-health-restrict">--</span>
+            </p>
+            <p>
+              <strong>需要通知家長：</strong>
+              <span id="alert-health-parent">--</span>
+            </p>
+            <p>
+              <strong>需要通知健康中心：</strong>
+              <span id="alert-health-center">--</span>
+            </p>
+          </div>
+
+          <div class="info-card" style="border-left-color:#fbbc05;">
+            <h4>補助與行政處理提醒</h4>
+            <p>
+              <strong>補助類型：</strong>
+              <span id="alert-sub-type">--</span>
+            </p>
+            <p>
+              <strong>申請狀態：</strong>
+              <span id="alert-sub-status">--</span>
+            </p>
+            <p>
+              <strong>核定期間：</strong>
+              <span id="alert-sub-period">--</span>
+            </p>
+            <p>
+              <strong>承辦人員：</strong>
+              <span id="alert-sub-owner">--</span>
+            </p>
+            <p>
+              <strong>文件狀態：</strong>
+              <span id="alert-sub-doc">--</span>
+            </p>
+            <p>
+              <strong>備註：</strong>
+              <span id="alert-sub-notes">--</span>
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div> <!-- detail-state -->
+  </div> <!-- container -->
+
+  <script>
+    let activeStudentId = "";
+    let studentDataList = [];
+
+    function unwrapApiResponse(result) {
+      let current = result;
+      let depth = 0;
+
+      while (
+        current &&
+        typeof current === "object" &&
+        current.success === true &&
+        current.data &&
+        typeof current.data === "object" &&
+        !Array.isArray(current.data) &&
+        Object.prototype.hasOwnProperty.call(
+          current.data,
+          "success"
+        ) &&
+        depth < 5
+      ) {
+        current = current.data;
+        depth++;
+      }
+
+      return current;
+    }
+
+    function extractArrayPayload(response) {
+      if (Array.isArray(response)) {
+        return response;
+      }
+
+      if (
+        response &&
+        response.success === true &&
+        Array.isArray(response.data)
+      ) {
+        return response.data;
+      }
+
+      return null;
+    }
+
+    window.onload = function() {
+      initWorkspace();
+    };
+
+    function initWorkspace() {
+      // 讀取使用者基本資訊
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.success && res.data.email) {
+            document.getElementById('username-display').innerText = "教師工作台";
+            document.getElementById('email-display').innerText = res.data.email;
+          }
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('email-display').innerText = "無連線";
+          console.error("無法取得使用者資訊:", err);
+        })
+        .ajaxGetInitialInfo();
+
+      loadAccessibleClasses();
+    }
+
+    function loadAccessibleClasses() {
+      const select = document.getElementById('classSelect');
+      const msgArea = document.getElementById('workspaceMessage');
+
+      msgArea.textContent = "";
+      select.replaceChildren();
+
+      const optLoading = document.createElement('option');
+      optLoading.value = "";
+      optLoading.textContent = "讀取班級中……";
+      select.appendChild(optLoading);
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          select.replaceChildren();
+
+          try {
+            const response = unwrapApiResponse(result);
+            const classes = extractArrayPayload(response);
+
+            if (classes === null) {
+              const optError = document.createElement('option');
+              optError.value = "";
+              optError.textContent = "資料格式錯誤";
+              select.appendChild(optError);
+
+              document.getElementById('studentCount').innerText = "0";
+              renderStudentCards([]);
+              msgArea.textContent = "班級資料格式錯誤，請檢查後端 API 回傳。";
+              console.error("原始 API 回傳:", result);
+              return;
+            }
+
+            if (classes.length > 0) {
+              classes.forEach(function(c) {
+                const opt = document.createElement('option');
+                opt.value = c.class_id;
+                opt.textContent = c.class_name + " (" + c.school_year + "學年度)";
+                select.appendChild(opt);
+              });
+
+              // 若有班級，選取第一個班級並加載學生
+              const firstClassId = select.options[0].value;
+              select.value = firstClassId;
+              loadStudentsForClass(firstClassId);
+            } else {
+              const optNone = document.createElement('option');
+              optNone.value = "";
+              optNone.textContent = "無可存取班級";
+              select.appendChild(optNone);
+
+              document.getElementById('studentCount').innerText = "0";
+              renderStudentCards([]);
+
+              document.getElementById('list-state').style.display = 'block';
+              document.getElementById('student-container').style.display = 'none';
+              document.getElementById('no-classes-error').style.display = 'block';
+              document.getElementById('error-message-text').textContent = (response && response.message) ? response.message : "目前沒有可存取的班級，請聯絡系統管理員確認權限。";
+            }
+          } catch (err) {
+            const optError = document.createElement('option');
+            optError.value = "";
+            optError.textContent = "解析錯誤";
+            select.appendChild(optError);
+
+            document.getElementById('studentCount').innerText = "0";
+            renderStudentCards([]);
+            msgArea.textContent = "解析班級資料發生錯誤: " + err.message;
+            console.error("原始 API 解析錯誤:", err);
+          }
+        })
+        .withFailureHandler(function(err) {
+          select.replaceChildren();
+          const optError = document.createElement('option');
+          optError.value = "";
+          optError.textContent = "讀取失敗";
+          select.appendChild(optError);
+
+          document.getElementById('studentCount').innerText = "0";
+          renderStudentCards([]);
+          msgArea.textContent = err.message || "通訊失敗，無法讀取班級資料。";
+        })
+        .ajaxListAccessibleClasses();
+    }
+
+    function loadStudentsForClass(classId) {
+      const msgArea = document.getElementById('workspaceMessage');
+      const countEl = document.getElementById('studentCount');
+      const container = document.getElementById('student-container');
+      const filterType = document.getElementById('filterSelect').value;
+
+      msgArea.textContent = "";
+
+      if (!classId) {
+        countEl.innerText = "0";
+        renderStudentCards([]);
+        return;
+      }
+
+      countEl.innerText = "讀取中...";
+      container.innerHTML = "<div style='grid-column:1/-1; text-align:center; padding:30px; color:#666;'>載入學生名冊中...</div>";
+      document.getElementById('list-state').style.display = 'block';
+      document.getElementById('student-container').style.display = 'grid';
+      document.getElementById('no-classes-error').style.display = 'none';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          try {
+            const response = unwrapApiResponse(result);
+            const students = extractArrayPayload(response);
+
+            if (students === null) {
+              countEl.innerText = "0";
+              renderStudentCards([]);
+              msgArea.textContent = "學生資料格式錯誤，請檢查後端 API 回傳。";
+              console.error("原始學生 API 回傳:", result);
+              return;
+            }
+
+            studentDataList = students;
+            countEl.innerText = studentDataList.length;
+            renderStudentCards(studentDataList);
+            msgArea.textContent = "";
+          } catch (err) {
+            countEl.innerText = "0";
+            renderStudentCards([]);
+            msgArea.textContent = "解析學生資料時發生錯誤: " + err.message;
+            console.error("原始學生解析錯誤:", err);
+          }
+        })
+        .withFailureHandler(function(err) {
+          countEl.innerText = "0";
+          renderStudentCards([]);
+          msgArea.textContent = err.message || "通訊失敗，無法讀取學生資料。";
+        })
+        .ajaxListAccessibleStudents(classId, filterType);
+    }
+
+    function renderStudentCards(students) {
+      const container = document.getElementById('student-container');
+      container.innerHTML = "";
+      if (students.length === 0) {
+        container.innerHTML = "<div style='grid-column:1/-1; text-align:center; padding:30px; color:#999;'>查無符合條件的學生。</div>";
+        return;
+      }
+      students.forEach(function(s) {
+        const card = document.createElement('div');
+        card.className = "student-card";
+        card.id = "card-" + s.student_id;
+        let badges = '<span class="badge badge-task">待辦 ' + s.pending_tasks_count + '</span>';
+        if (s.has_health_alert) badges += '<span class="badge badge-alert">健康</span>';
+        if (s.has_subsidy_alert) badges += '<span class="badge badge-subsidy">補助待查</span>';
+
+        card.innerHTML = `
+          <div class="card-header">
+            <span class="seat-badge">座號 ${s.seat_no}</span>
+            <span class="student-name">${escapeHtml(s.student_name)}</span>
+          </div>
+          <div class="card-body">
+            <p><strong>孩子特質：</strong>${escapeHtml(s.personality_summary)}</p>
+            <p><strong>學習優勢：</strong>${escapeHtml(s.learning_strength_summary)}</p>
+            <p><strong>支持重點：</strong>${escapeHtml(s.current_support_summary)}</p>
+            <p><strong>主要照顧者：</strong>${escapeHtml(s.primary_caregiver_relationship)}</p>
+            <div class="badge-container">${badges}</div>
+          </div>
+          <button class="btn-view" onclick="viewStudent('${s.student_id}')">查看學生資料</button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function filterCards() {
+      const q = document.getElementById('search-input').value.trim().toLowerCase();
+      if (!q) { renderStudentCards(studentDataList); return; }
+      const filtered = studentDataList.filter(function(s) {
+        return s.student_name.toLowerCase().indexOf(q) !== -1 || String(s.seat_no) === q;
+      });
+      renderStudentCards(filtered);
+    }
+
+    function viewStudent(studentId) {
+      activeStudentId = studentId;
+      document.getElementById('list-state').style.display = 'none';
+      document.getElementById('detail-state').style.display = 'block';
+      switchTab('quicklook', document.querySelector('.tab-btn'));
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.success) {
+            const d = res.data;
+            document.getElementById('detail-name').innerText = d.student.student_name;
+            document.getElementById('detail-seat').innerText = "座號 " + d.student.seat_no;
+            document.getElementById('detail-class-info').innerText = d.student.school_year + "學年度 " + (d.student.class_name || "");
+            document.getElementById('quick-personality').innerText = d.personality_summary;
+            document.getElementById('quick-strengths').innerText = d.learning_strength_summary;
+            document.getElementById('quick-support').innerText = d.current_support_summary;
+            document.getElementById('quick-tasks-count').innerText = d.tasks_count;
+            document.getElementById('quick-health-alert').innerText = d.health_action.teacher_summary;
+            document.getElementById('quick-subsidy-alert').innerText = d.subsidy_action.subsidy_type + " (" + d.subsidy_action.application_status + ")";
+            let famHtml = "";
+            d.guardians.forEach(g => {
+              famHtml += `<div>${escapeHtml(g.relationship)}：${escapeHtml(g.phone_masked)} (適合: ${escapeHtml(g.contact_time)})</div>`;
+            });
+            document.getElementById('quick-family').innerHTML = famHtml || "無聯絡人資訊";
+          } else {
+            document.getElementById('workspaceMessage').textContent = res.message || "載入學生速覽資料失敗";
+          }
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('workspaceMessage').textContent = err.message || "通訊失敗，無法讀取速覽資料。";
+        })
+        .ajaxGetStudentOverview(studentId);
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.success) {
+            const d = res.data;
+            document.getElementById('learn-strengths').innerText = d.learning.strengths;
+            document.getElementById('learn-needs').innerText = d.learning.learning_needs;
+            document.getElementById('learn-emotional').innerText = d.learning.emotional_support;
+            document.getElementById('learn-peer').innerText = d.learning.peer_interaction;
+            document.getElementById('learn-source').innerText = d.learning.source_type;
+            document.getElementById('learn-status').innerText = d.learning.verified_status;
+            document.getElementById('learn-period').innerText = d.learning.effective_to || "無期限";
+
+            const fContainer = document.getElementById('family-container');
+            fContainer.innerHTML = "";
+            d.guardians.forEach(g => {
+              const div = document.createElement('div');
+              div.className = "info-card";
+              div.innerHTML = `
+                <h4>親屬關係：${escapeHtml(g.relationship)} (${escapeHtml(g.name)})</h4>
+                <p><strong>聯絡電話：</strong>${escapeHtml(g.phone_masked)}</p>
+                <p><strong>適合聯絡時間：</strong>${escapeHtml(g.contact_time)}</p>
+                <p><strong>聯絡方式：</strong>${escapeHtml(g.contact_method)}</p>
+                <p><strong>監護權/接送：</strong>${g.is_legal_guardian ? '有監護權' : '無'} | 允許接送：${g.pickup_permission ? '允許' : '否'}</p>
+                <p><strong>備註：</strong>${escapeHtml(g.notes || '無')}</p>
+              `;
+              fContainer.appendChild(div);
+            });
+
+            document.getElementById('strat-effective').innerText = d.strategies.effective_strategies;
+            document.getElementById('strat-avoid').innerText = d.strategies.avoid_strategies;
+            document.getElementById('strat-transition').innerText = d.strategies.transition_notes;
+            document.getElementById('trans-notes').innerText = d.transition.transition_notes;
+
+            const eUl = document.getElementById('trans-events');
+            eUl.innerHTML = "";
+            d.transition.active_tasks.forEach(t => {
+              const li = document.createElement('li'); li.textContent = "[待辦事項] " + t; eUl.appendChild(li);
+            });
+
+            const contactContainer = document.getElementById('contact-timeline');
+            contactContainer.innerHTML = "";
+            if (d.contactLogs.length === 0) {
+              contactContainer.innerHTML = "<p style='color:#999;'>目前無親師聯絡紀錄。</p>";
+            } else {
+              d.contactLogs.forEach(c => {
+                const div = document.createElement('div');
+                div.className = "timeline-item";
+                div.innerHTML = `
+                  <div class="timeline-date">\\-- ${c.contact_date} (${escapeHtml(c.contact_method)} - ${escapeHtml(c.contact_person)})</div>
+                  <div class="timeline-title">\\-- ${escapeHtml(c.topic)}</div>
+                  <div class="timeline-desc">
+                    <strong>談話摘要：</strong>${escapeHtml(c.objective_summary)}<br/>
+                    <strong>家長回應：</strong>${escapeHtml(c.guardian_response)}<br/>
+                    <strong>雙方共識：</strong>${escapeHtml(c.agreement)}<br/>
+                    <strong>後續行動：</strong>${escapeHtml(c.follow_up_action)}
+                  </div>
+                `;
+                contactContainer.appendChild(div);
+              });
+            }
+
+            renderTaskList('tasks-todo', d.tasks.todo.concat(d.tasks.in_progress));
+            renderTaskList('tasks-completed', d.tasks.completed);
+
+            document.getElementById('alert-health-level').innerText = d.alerts.health.alert_level;
+            document.getElementById('alert-health-summary').innerText = d.alerts.health.teacher_summary;
+            document.getElementById('alert-health-action').innerText = d.alerts.health.first_action;
+            document.getElementById('alert-health-restrict').innerText = d.alerts.health.activity_restriction;
+            document.getElementById('alert-health-parent').innerText = d.alerts.health.contact_guardian ? '需要' : '不需';
+            document.getElementById('alert-health-center').innerText = d.alerts.health.notify_health_center ? '需要' : '不需';
+
+            document.getElementById('alert-sub-type').innerText = d.alerts.subsidy.subsidy_type;
+            document.getElementById('alert-sub-status').innerText = d.alerts.subsidy.application_status;
+            document.getElementById('alert-sub-period').innerText = d.alerts.subsidy.approved_period;
+            document.getElementById('alert-sub-owner').innerText = d.alerts.subsidy.case_owner;
+            document.getElementById('alert-sub-doc').innerText = d.alerts.subsidy.document_status;
+            document.getElementById('alert-sub-notes').innerText = d.alerts.subsidy.notes;
+          } else {
+            document.getElementById('workspaceMessage').textContent = res.message || "載入學生詳細資料失敗";
+          }
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('workspaceMessage').textContent = err.message || "通訊失敗，無法讀取學生詳細資料。";
+        })
+        .ajaxGetStudentDetail(studentId);
+    }
+
+    function renderTaskList(elementId, list) {
+      const div = document.getElementById(elementId);
+      div.innerHTML = "";
+      if (list.length === 0) {
+        div.innerHTML = "<p style='color:#999; font-size:12px;'>無待辦事項。</p>";
+        return;
+      }
+      list.forEach(t => {
+        const item = document.createElement('div');
+        item.style = "padding:8px; background:#fff; border:1px solid #e0e0e0; border-radius:4px; margin-bottom:8px; font-size:12px;";
+        item.innerHTML = `
+          <strong>${escapeHtml(t.task_title)}</strong>
+          <div style="color:#5f6368; margin-top:4px;">${escapeHtml(t.description || '無描述')}</div>
+          <div style="margin-top:4px; color:#d93025;">期限：${t.due_date} | 優先度：${t.priority}</div>
+        `;
+        div.appendChild(item);
+      });
+    }
+
+    function backToList() {
+      document.getElementById('detail-state').style.display = 'none';
+      document.getElementById('list-state').style.display = 'block';
+      activeStudentId = "";
+    }
+
+    function switchTab(tabId, button) {
+      const buttons = document.querySelectorAll('.tab-btn');
+      const contents = document.querySelectorAll('.tab-content');
+
+      buttons.forEach(function(item) {
+        item.classList.remove('active');
+      });
+
+      contents.forEach(function(item) {
+        item.classList.remove('active');
+      });
+
+      const targetButton =
+        button ||
+        document.querySelector(
+          '.tab-btn[onclick*="' + tabId + '"]'
+        );
+
+      if (targetButton) {
+        targetButton.classList.add('active');
+      }
+
+      const targetContent =
+        document.getElementById('tab-' + tabId);
+
+      if (targetContent) {
+        targetContent.classList.add('active');
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>

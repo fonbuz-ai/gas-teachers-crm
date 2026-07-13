@@ -1,0 +1,41 @@
+name: Verify source and installer
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile Python utilities
+        run: python -m py_compile build.py extract_html.py
+
+      - name: Rebuild single-file installer
+        run: python build.py
+
+      - name: Verify generated installer is committed
+        run: git diff --exit-code -- dist/ClassCareInstaller.gs
+
+      - name: Check Apps Script JavaScript syntax
+        shell: bash
+        run: |
+          for file in ./*.gs ./dist/*.gs; do
+            node --check < "$file"
+          done
+
+      - name: Validate Apps Script manifest JSON
+        run: python -m json.tool appsscript.json > /dev/null

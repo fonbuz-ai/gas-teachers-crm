@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>學生名冊匯入中心 MVP</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 15px;
+      background-color: #f8f9fa;
+      color: #3c4043;
+      font-size: 13px;
+    }
+    .container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
+      display: flex;
+      flex-direction: column;
+      height: 620px;
+      overflow: hidden;
+    }
+    .header {
+      background: #1a73e8;
+      color: white;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .tabs {
+      display: flex;
+      background: #f1f3f4;
+      border-bottom: 1px solid #dadce0;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: 600;
+      color: #5f6368;
+      font-size: 13px;
+      border-bottom: 3px solid transparent;
+      outline: none;
+    }
+    .tab-btn.active {
+      color: #1a73e8;
+      border-bottom-color: #1a73e8;
+      background: white;
+    }
+    .tab-content {
+      padding: 20px;
+      flex-grow: 1;
+      display: none;
+      overflow-y: auto;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .info-box {
+      background: #e8f0fe;
+      border-left: 4px solid #1a73e8;
+      color: #1967d2;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      line-height: 1.4;
+    }
+    .btn-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    button {
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      transition: background 0.2s;
+    }
+    .btn-primary {
+      background: #1a73e8;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #1557b0;
+    }
+    .btn-primary:disabled {
+      background: #dadce0;
+      color: #9aa0a6;
+      cursor: not-allowed;
+    }
+    .btn-success {
+      background: #34a853;
+      color: white;
+    }
+    .btn-success:hover {
+      background: #2b8c45;
+    }
+    .btn-success:disabled {
+      background: #dadce0;
+      color: #9aa0a6;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: #f1f3f4;
+      color: #3c4043;
+    }
+    .btn-secondary:hover {
+      background: #dadce0;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .stat-card {
+      background: #f8f9fa;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+    }
+    .stat-card strong {
+      display: block;
+      font-size: 18px;
+      color: #1a73e8;
+      margin-bottom: 4px;
+    }
+    .stat-card span {
+      font-size: 11px;
+      color: #5f6368;
+    }
+    .stat-card.error strong {
+      color: #d93025;
+    }
+    .stat-card.warning strong {
+      color: #fbbc05;
+    }
+    .stat-card.success strong {
+      color: #34a853;
+    }
+    .report-card {
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 15px;
+    }
+    .report-header {
+      background: #f1f3f4;
+      padding: 8px 12px;
+      font-weight: 600;
+      border-bottom: 1px solid #dadce0;
+    }
+    .report-body {
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #dadce0;
+      text-align: left;
+    }
+    th {
+      background: #f8f9fa;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .badge-success {
+      background: #e6f4ea;
+      color: #137333;
+    }
+    .badge-warning {
+      background: #fef7e0;
+      color: #b06000;
+    }
+    .badge-error {
+      background: #fce8e6;
+      color: #c5221f;
+    }
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .success-box {
+      background: #e6f4ea;
+      border: 1px solid #34a853;
+      border-radius: 6px;
+      padding: 20px;
+      text-align: center;
+      margin-top: 10px;
+    }
+    .success-box h3 {
+      color: #137333;
+      margin-top: 0;
+    }
+    .btn-workspace {
+      background: #1a73e8;
+      color: white;
+      padding: 12px 24px;
+      font-size: 14px;
+      border-radius: 4px;
+      margin-top: 15px;
+      box-shadow: 0 1px 2px rgba(60,64,67,0.3);
+    }
+    .btn-workspace:hover {
+      background: #1557b0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>ClassCare 學生名冊匯入中心 MVP</h2>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-btn-main" onclick="switchTab('main', this)">預檢與正式寫入</button>
+      <button class="tab-btn" id="tab-btn-history" onclick="switchTab('history', this)">最近匯入紀錄</button>
+    </div>
+
+    <!-- Tab 1: Main Precheck -->
+    <div class="tab-content active" id="tab-main">
+      <div class="info-box">
+        <strong>說明：</strong> 本功能將直接讀取工作表 <code>import_students</code> 中的列資料。請在正式寫入前進行預檢。
+      </div>
+
+      <div class="btn-bar">
+        <button class="btn-primary" id="btn-precheck" onclick="runPrecheck()">
+          <span id="precheck-spinner" style="display:none;" class="spinner"></span>1. 執行預檢
+        </button>
+        <button class="btn-success" id="btn-commit" disabled onclick="runCommit()">
+          <span id="commit-spinner" style="display:none;" class="spinner"></span>2. 確認正式寫入資料
+        </button>
+      </div>
+
+      <!-- Stats section -->
+      <div class="stats-grid" id="stats-section" style="display:none;">
+        <div class="stat-card">
+          <strong id="stat-total">0</strong>
+          <span>總資料列</span>
+        </div>
+        <div class="stat-card success">
+          <strong id="stat-valid">0</strong>
+          <span>正常列數</span>
+        </div>
+        <div class="stat-card warning">
+          <strong id="stat-warning">0</strong>
+          <span>警告列數</span>
+        </div>
+        <div class="stat-card error">
+          <strong id="stat-error">0</strong>
+          <span>錯誤列數</span>
+        </div>
+        <div class="stat-card">
+          <strong id="stat-new">0</strong>
+          <span>預計新學生</span>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="stats-section-2" style="display:none;">
+        <div class="stat-card">
+          <strong id="stat-new-classes">0</strong>
+          <span>預計新班級</span>
+        </div>
+        <div class="stat-card">
+          <strong id="stat-updated-students">0</strong>
+          <span>預計更新生</span>
+        </div>
+        <div class="stat-card">
+          <strong id="stat-new-teachers">0</strong>
+          <span>預計新導師</span>
+        </div>
+        <div class="stat-card">
+          <strong id="stat-new-scopes">0</strong>
+          <span>預計新 Scopes</span>
+        </div>
+        <div class="stat-card">
+          <strong id="stat-existing-classes">0</strong>
+          <span>匹配舊班級</span>
+        </div>
+      </div>
+
+      <!-- Report table -->
+      <div id="report-section" style="display:none;">
+        <div class="report-card">
+          <div class="report-header">詳細預檢結果報告</div>
+          <div class="report-body">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:50px;">行號</th>
+                  <th>資料行描述</th>
+                  <th style="width:80px;">預檢狀態</th>
+                  <th>詳細說明 / 警告 / 錯誤原因</th>
+                </tr>
+              </thead>
+              <tbody id="report-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Post-commit Success box -->
+      <div class="success-box" id="success-section" style="display:none;">
+        <h3>🟢 學生名冊匯入完成！</h3>
+        <p>系統已順利建立/更新對應的班級、導師帳號、班級授權範圍 (CLASS Scopes) 以及學生資料。</p>
+        <p style="font-size:12px; color:#5f6368;" id="success-stat-text"></p>
+        <button class="btn-workspace" onclick="openWorkspace()">開啟導師工作台</button>
+      </div>
+    </div>
+
+    <!-- Tab 2: History -->
+    <div class="tab-content" id="tab-history">
+      <div class="btn-bar">
+        <button class="btn-secondary" onclick="loadHistory()">重新整理</button>
+      </div>
+
+      <div class="report-card" style="margin-top: 0;">
+        <div class="report-header">最近 15 次匯入批次紀錄</div>
+        <div class="report-body" style="max-height: 440px;">
+          <table>
+            <thead>
+              <tr>
+                <th>匯入時間</th>
+                <th>類型</th>
+                <th>匯入人員</th>
+                <th>狀態</th>
+                <th>成功數</th>
+                <th>失敗數</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <tr>
+                <td colspan="6" style="text-align:center; color:#999;">尚未載入紀錄。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let activePrecheckData = null;
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      if (tabId === 'main') {
+        document.getElementById('tab-btn-main').classList.add('active');
+        document.getElementById('tab-main').classList.add('active');
+      } else {
+        document.getElementById('tab-btn-history').classList.add('active');
+        document.getElementById('tab-history').classList.add('active');
+        loadHistory();
+      }
+    }
+
+    function runPrecheck() {
+      // Show loading
+      document.getElementById('precheck-spinner').style.display = 'inline-block';
+      document.getElementById('btn-precheck').disabled = true;
+      document.getElementById('btn-commit').disabled = true;
+      document.getElementById('success-section').style.display = 'none';
+
+      google.script.run
+        .withSuccessHandler(onPrecheckSuccess)
+        .withFailureHandler(onPrecheckFailure)
+        .ajaxValidateRosterFromSheet();
+    }
+
+    function onPrecheckSuccess(res) {
+      document.getElementById('precheck-spinner').style.display = 'none';
+      document.getElementById('btn-precheck').disabled = false;
+
+      if (!res.success) {
+        alert("預檢失敗：" + res.message);
+        return;
+      }
+
+      activePrecheckData = res.data;
+
+      // Update stats
+      document.getElementById('stat-total').innerText = res.data.totalRows;
+      document.getElementById('stat-valid').innerText = res.data.validRows;
+      document.getElementById('stat-warning').innerText = res.data.warningRows;
+      document.getElementById('stat-error').innerText = res.data.errorRows;
+      document.getElementById('stat-new').innerText = res.data.newStudents;
+
+      document.getElementById('stat-new-classes').innerText = res.data.newClasses;
+      document.getElementById('stat-updated-students').innerText = res.data.updatedStudents;
+      document.getElementById('stat-new-teachers').innerText = res.data.newTeachers;
+      document.getElementById('stat-new-scopes').innerText = res.data.newScopes;
+      document.getElementById('stat-existing-classes').innerText = res.data.existingClasses;
+
+      document.getElementById('stats-section').style.display = 'flex';
+      document.getElementById('stats-section-2').style.display = 'flex';
+
+      // Render table
+      const tbody = document.getElementById('report-tbody');
+      tbody.innerHTML = "";
+      res.data.reports.forEach(r => {
+        const tr = document.createElement('tr');
+        let badgeHtml = "";
+        if (r.status === 'SUCCESS') {
+          badgeHtml = '<span class="badge badge-success">SUCCESS</span>';
+        } else if (r.status === 'WARNING') {
+          badgeHtml = '<span class="badge badge-warning">WARNING</span>';
+        } else if (r.status === 'ERROR') {
+          badgeHtml = '<span class="badge badge-error">ERROR</span>';
+        }
+
+        tr.innerHTML = `
+          <td>${r.rowNo}</td>
+          <td>${escapeHtml(r.summary)}</td>
+          <td>${badgeHtml}</td>
+          <td>${escapeHtml(r.message)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('report-section').style.display = 'block';
+
+      // Enable commit if there are valid rows and zero errors
+      const canCommit = (res.data.validRows + res.data.warningRows > 0) && (res.data.errorRows === 0);
+      document.getElementById('btn-commit').disabled = !canCommit;
+
+      if (res.data.errorRows > 0) {
+        alert("資料中含有錯誤列（標示為 ERROR），請修正後再執行預檢。含有錯誤列時無法寫入。");
+      }
+    }
+
+    function onPrecheckFailure(err) {
+      document.getElementById('precheck-spinner').style.display = 'none';
+      document.getElementById('btn-precheck').disabled = false;
+      alert("系統呼叫失敗：" + err.message);
+    }
+
+    function runCommit() {
+      if (!activePrecheckData) return;
+
+      let confirmMsg = `確定要將這 ${activePrecheckData.validRows + activePrecheckData.warningRows} 筆資料寫入系統嗎？`;
+      if (activePrecheckData.warningRows > 0) {
+        confirmMsg += `\n\n注意：資料中含有 ${activePrecheckData.warningRows} 個警告，將會以預設規則忽略或覆蓋，是否確定？`;
+      }
+
+      if (!confirm(confirmMsg)) return;
+
+      document.getElementById('commit-spinner').style.display = 'inline-block';
+      document.getElementById('btn-precheck').disabled = true;
+      document.getElementById('btn-commit').disabled = true;
+
+      google.script.run
+        .withSuccessHandler(onCommitSuccess)
+        .withFailureHandler(onCommitFailure)
+        .ajaxImportRosterFromSheet();
+    }
+
+    function onCommitSuccess(res) {
+      document.getElementById('commit-spinner').style.display = 'none';
+      document.getElementById('btn-precheck').disabled = false;
+
+      if (!res.success) {
+        alert("寫入失敗：" + res.message);
+        return;
+      }
+
+      // Hide precheck panel and show success panel
+      document.getElementById('stats-section').style.display = 'none';
+      document.getElementById('stats-section-2').style.display = 'none';
+      document.getElementById('report-section').style.display = 'none';
+      document.getElementById('btn-commit').disabled = true;
+
+      let statText = `正式寫入：共完成 ${res.data.importedCount} 筆學生資料之新增或更新作業。`;
+      if (!res.data.operatorHasAccess) {
+        statText += `\n\n⚠️ 注意：目前您的登入帳號 (${res.data.operator}) 尚未被授權存取此批匯入的班級。請聯絡管理員為您設定對應的 CLASS 授權範疇，否則開啟導師工作台後將無法讀取此班級資料。`;
+        document.getElementById('success-stat-text').style.color = '#c5221f';
+        document.getElementById('success-stat-text').style.fontWeight = 'bold';
+      } else {
+        document.getElementById('success-stat-text').style.color = '#137333';
+        document.getElementById('success-stat-text').style.fontWeight = 'normal';
+      }
+      document.getElementById('success-stat-text').innerText = statText;
+      document.getElementById('success-section').style.display = 'block';
+    }
+
+    function onCommitFailure(err) {
+      document.getElementById('commit-spinner').style.display = 'none';
+      document.getElementById('btn-precheck').disabled = false;
+      alert("正式寫入例外錯誤：" + err.message);
+    }
+
+    function openWorkspace() {
+      google.script.run.showTeacherWorkspace();
+      google.script.host.close();
+    }
+
+    function loadHistory() {
+      const tbody = document.getElementById('history-tbody');
+      tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; color:#999;'><span class='spinner' style='border-top-color:#1a73e8;'></span>載入紀錄中...</td></tr>";
+
+      google.script.run.withSuccessHandler(function(res) {
+        if (res.success) {
+          tbody.innerHTML = "";
+          if (res.data.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; color:#999;'>無任何匯入紀錄。</td></tr>";
+            return;
+          }
+          res.data.forEach(h => {
+            const tr = document.createElement('tr');
+            const statusBadge = h.status === 'SUCCESS' ?
+              '<span class="badge badge-success">SUCCESS</span>' :
+              '<span class="badge badge-warning">PARTIAL</span>';
+
+            tr.innerHTML = `
+              <td>${h.timestamp}</td>
+              <td>${h.import_type === 'STUDENT_ROSTER' ? '學生名冊' : '家庭聯絡'}</td>
+              <td>${escapeHtml(h.operator_email)}</td>
+              <td>${statusBadge}</td>
+              <td>${h.success_count}</td>
+              <td>${h.error_count}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        } else {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#c5221f;">讀取失敗：${escapeHtml(res.message)}</td></tr>`;
+        }
+      }).ajaxListImportBatches();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>

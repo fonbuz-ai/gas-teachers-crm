@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:15px; color:#333; font-size:14px; background-color:#fafafa; }
+    .wizard-container { background:#fff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); padding:20px; min-height:480px; display:flex; flex-direction:column; justify-content:space-between; }
+    h2 { color:#1a73e8; margin-top:0; border-bottom:2px solid #e8f0fe; padding-bottom:8px; }
+    .step-content { flex-grow:1; margin-bottom:20px; }
+    .step { display:none; }
+    .step.active { display:block; }
+    .btn-group { display:flex; justify-content:space-between; }
+    button { padding:10px 20px; border-radius:4px; border:none; cursor:pointer; font-weight:600; font-size:13px; }
+    .btn-primary { background:#1a73e8; color:#fff; }
+    .btn-primary:hover { background:#1557b0; }
+    .btn-secondary { background:#f1f3f4; color:#3c4043; }
+    .btn-secondary:hover { background:#e8eaed; }
+    .form-group { margin-bottom:15px; }
+    label { display:block; font-weight:bold; margin-bottom:5px; font-size:13px; }
+    input[type="text"] { width:95%; padding:8px; border:1px solid #dadce0; border-radius:4px; font-size:13px; }
+    .info-box { background:#e8f0fe; padding:10px; border-radius:4px; border-left:4px solid #1a73e8; font-size:12px; margin-bottom:15px; color:#1967d2; }
+    .warning-box { background:#fce8e6; padding:10px; border-radius:4px; border-left:4px solid #d93025; font-size:12px; margin-bottom:15px; color:#a51d24; }
+    ul { padding-left:20px; margin:5px 0; }
+    .progress-bar { display:flex; justify-content:space-between; margin-bottom:20px; background:#e8eaed; border-radius:4px; height:8px; position:relative; }
+    .progress-fill { background:#1a73e8; height:100%; border-radius:4px; width:0%; transition: width 0.3s ease; }
+  </style>
+</head>
+<body>
+  <div class="wizard-container">
+    <div>
+      <h2>ClassCare 啟動設定精靈</h2>
+      <div style="font-size:11px; color:#5f6368; text-align:right; margin-bottom:5px;" id="step-indicator">步驟 1 / 6</div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="step-content">
+        <div class="step active" id="step-1">
+          <h3>第一步：填寫基本資訊</h3>
+          <div class="form-group"><label>系統名稱</label><input type="text" id="sys-name" value="ClassCare 班級關懷工作台"></div>
+          <div class="form-group"><label>學校名稱</label><input type="text" id="school-name" placeholder="例如：春風國民小學"></div>
+          <div class="form-group"><label>當前學年度</label><input type="text" id="school-year" value="114"></div>
+          <div class="info-box">時區預設固定為：Asia/Taipei</div>
+        </div>
+        <div class="step" id="step-2">
+          <h3>第二步：設定管理員</h3>
+          <div class="info-box">偵測到目前操作帳號：<br/><strong id="session-email">讀取中...</strong></div>
+          <div class="warning-box" id="email-warning" style="display:none;">警告：無法取得您的 Google 帳號 Email，請確認您已正確登入。</div>
+          <div class="form-group"><label>管理員帳號 Email</label><input type="text" id="admin-email"></div>
+          <div class="form-group"><label>管理員姓名</label><input type="text" id="admin-name" placeholder="例如：張主任"></div>
+        </div>
+        <div class="step" id="step-3">
+          <h3>第三步：設定附件資料夾</h3>
+          <p>系統需要一個 Google Drive 資料夾來保存健康診斷書與補助證明等隱私附件。</p>
+          <div class="form-group">
+            <input type="checkbox" id="create-folder" checked>
+            <label style="display:inline; font-weight:normal;" for="create-folder">自動建立專用 Google Drive 資料夾</label>
+          </div>
+        </div>
+        <div class="step" id="step-4">
+          <h3>第四步：建立資料表結構</h3>
+          <p>系統將在目前的試算表中安全地初始化 12 個核心工作表。</p>
+          <div class="warning-box">注意：若試算表內已存在上述工作表與資料，將會予以保留，不會刪除或覆寫原有內容。</div>
+        </div>
+        <div class="step" id="step-5">
+          <h3>第五步：匯入示範資料</h3>
+          <p>是否需要建立一組虛擬的五年三班測試資料？</p>
+          <div class="form-group">
+            <input type="checkbox" id="seed-demo">
+            <label style="display:inline; font-weight:normal;" for="seed-demo">匯入虛構示範資料（僅供測試，預設為不建立）</label>
+          </div>
+        </div>
+        <div class="step" id="step-6">
+          <h3>第六步：設定完成</h3>
+          <div id="setup-loader" class="loader-box">
+            <p style="text-align:center; padding: 20px; color:#5f6368;">🔄 正在初始化系統與驗證結構，請稍候...</p>
+          </div>
+          <div id="setup-result" style="display:none; font-size:13px; line-height:1.5;">
+            <div id="result-status" style="font-weight:bold; font-size:14px; margin-bottom:12px;"></div>
+
+            <div id="detail-box" style="background:#f8f9fa; border:1px solid #dadce0; border-radius:6px; padding:12px; margin-bottom:12px; display:none;">
+              <p style="margin:4px 0;"><strong>試算表名稱：</strong><span id="res-ss-name"></span></p>
+              <p style="margin:4px 0;"><strong>建立資料表數：</strong><span id="res-sheets-count">0</span> / <span id="res-expected-sheets-count">--</span></p>
+              <p style="margin:4px 0;"><strong>管理員狀態：</strong><span id="res-admin-status">0</span> 人啟用</p>
+
+              <div id="res-errors-box" style="margin-top:8px; display:none;">
+                <strong style="color:#c5221f;">錯誤限制：</strong>
+                <ul id="res-errors-list" style="margin:2px 0; padding-left:20px; color:#c5221f; font-size:12px;"></ul>
+              </div>
+              <div id="res-warnings-box" style="margin-top:8px; display:none;">
+                <strong style="color:#b06000;">警示警告：</strong>
+                <ul id="res-warnings-list" style="margin:2px 0; padding-left:20px; color:#b06000; font-size:12px;"></ul>
+              </div>
+            </div>
+
+            <div id="action-buttons-box"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="btn-group" id="nav-group">
+      <button class="btn-secondary" id="btn-prev" onclick="changeStep(-1)" style="visibility:hidden;">上一步</button>
+      <button class="btn-primary" id="btn-next" onclick="changeStep(1)">下一步</button>
+    </div>
+  </div>
+  <script>
+    let currentStep = 1; const totalSteps = 6; let userEmail = "";
+    window.onload = function() {
+      google.script.run.withSuccessHandler(function(res) {
+        if (res.success && res.data.email) {
+          userEmail = res.data.email;
+          document.getElementById('session-email').innerText = userEmail;
+          document.getElementById('admin-email').value = userEmail;
+        } else {
+          document.getElementById('session-email').innerText = "未取得";
+          document.getElementById('email-warning').style.display = 'block';
+        }
+      }).ajaxGetInitialInfo();
+      updateProgress();
+    };
+    function changeStep(offset) {
+      document.getElementById('step-' + currentStep).classList.remove('active');
+      currentStep += offset;
+      document.getElementById('step-' + currentStep).classList.add('active');
+      document.getElementById('btn-prev').style.visibility = (currentStep === 1 || currentStep === 6) ? 'hidden' : 'visible';
+      if (currentStep === 5) {
+        document.getElementById('btn-next').innerText = '開始初始化';
+      } else if (currentStep === 6) {
+        document.getElementById('nav-group').style.display = 'none';
+        triggerSetup();
+      } else {
+        document.getElementById('btn-next').innerText = '下一步';
+      }
+      updateProgress();
+    }
+    function updateProgress() {
+      document.getElementById('step-indicator').innerText = '步驟 ' + currentStep + ' / ' + totalSteps;
+      const fillPercent = ((currentStep - 1) / (totalSteps - 1)) * 100;
+      document.getElementById('progress-fill').style.width = fillPercent + '%';
+    }
+    function triggerSetup() {
+      const schoolName = document.getElementById('school-name').value.trim() || "未設定學校名稱";
+      const schoolYear = document.getElementById('school-year').value.trim() || "114";
+      const adminEmail = document.getElementById('admin-email').value.trim();
+      const adminName = document.getElementById('admin-name').value.trim() || "系統管理員";
+      const createFolder = document.getElementById('create-folder').checked;
+      const seedDemo = document.getElementById('seed-demo').checked;
+
+      const payload = {
+        schoolName: schoolName,
+        schoolYear: schoolYear,
+        adminEmail: adminEmail,
+        adminName: adminName,
+        createFolder: createFolder,
+        seedDemo: seedDemo
+      };
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          document.getElementById('setup-loader').style.display = 'none';
+          document.getElementById('setup-result').style.display = 'block';
+
+          if (response.success) {
+            displaySetupResults(response.data);
+          } else {
+            showErrorState(response.message || "初始化時發生未知錯誤。");
+          }
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('setup-loader').style.display = 'none';
+          document.getElementById('setup-result').style.display = 'block';
+          showErrorState(err.message || "通訊失敗，請確認目前連線或權限。");
+        })
+        .completeSetupWizard(payload);
+    }
+
+    function displaySetupResults(data) {
+      const setup = data.setup;
+      const status = data.status;
+
+      const statusTitle = document.getElementById('result-status');
+      const detailBox = document.getElementById('detail-box');
+      const btnBox = document.getElementById('action-buttons-box');
+
+      detailBox.style.display = 'block';
+      document.getElementById('res-ss-name').innerText = status.spreadsheetName || setup.spreadsheetName;
+
+      // 計算啟用的工作表數
+      let sheetsCount = 0;
+      if (status.sheetStatus) {
+        for (let s in status.sheetStatus) {
+          if (status.sheetStatus[s] === true) sheetsCount++;
+        }
+      }
+      document.getElementById('res-sheets-count').innerText = sheetsCount;
+      document.getElementById('res-expected-sheets-count').innerText = status.expectedSheetCount || setup.expectedSheetCount || 16;
+      document.getElementById('res-admin-status').innerText = status.adminCount;
+
+      // 顯示錯誤項目
+      const errorsBox = document.getElementById('res-errors-box');
+      const errorsList = document.getElementById('res-errors-list');
+      errorsList.replaceChildren();
+      if (status.errors && status.errors.length > 0) {
+        status.errors.forEach(err => {
+          const li = document.createElement('li');
+          li.textContent = err;
+          errorsList.appendChild(li);
+        });
+        errorsBox.style.display = 'block';
+      } else {
+        errorsBox.style.display = 'none';
+      }
+
+      // 顯示警告項目
+      const warningsBox = document.getElementById('res-warnings-box');
+      const warningsList = document.getElementById('res-warnings-list');
+      warningsList.replaceChildren();
+      if (status.warnings && status.warnings.length > 0) {
+        status.warnings.forEach(warn => {
+          const li = document.createElement('li');
+          li.textContent = warn;
+          warningsList.appendChild(li);
+        });
+        warningsBox.style.display = 'block';
+      } else {
+        warningsBox.style.display = 'none';
+      }
+
+      // 依錯誤筆數調整顯示與按鈕
+      btnBox.replaceChildren();
+      if (!status.errors || status.errors.length === 0) {
+        statusTitle.textContent = '✅ ClassCare 系統已建立完成。';
+        statusTitle.style.color = '#137333';
+
+        const btn1 = document.createElement('button');
+        btn1.className = 'btn-primary';
+        btn1.textContent = '② 開啟導師工作台';
+        btn1.style.width = '100%';
+        btn1.style.marginBottom = '8px';
+        btn1.onclick = openTeacherWorkspaceAfterSetup;
+
+        const btn2 = document.createElement('button');
+        btn2.className = 'btn-secondary';
+        btn2.textContent = '重新檢查系統狀態';
+        btn2.style.width = '100%';
+        btn2.style.marginBottom = '8px';
+        btn2.onclick = recheckSystemStatus;
+
+        const btn3 = document.createElement('button');
+        btn3.className = 'btn-secondary';
+        btn3.textContent = '關閉設定精靈';
+        btn3.style.width = '100%';
+        btn3.onclick = function() { google.script.host.close(); };
+
+        btnBox.appendChild(btn1);
+        btnBox.appendChild(btn2);
+        btnBox.appendChild(btn3);
+      } else {
+        statusTitle.textContent = '⚠️ 系統資料表已建立，但仍有項目需要處理。';
+        statusTitle.style.color = '#b06000';
+
+        const btn1 = document.createElement('button');
+        btn1.className = 'btn-primary';
+        btn1.textContent = '重新檢查系統狀態';
+        btn1.style.width = '100%';
+        btn1.style.marginBottom = '8px';
+        btn1.onclick = recheckSystemStatus;
+
+        const btn2 = document.createElement('button');
+        btn2.className = 'btn-secondary';
+        btn2.textContent = '關閉設定精靈';
+        btn2.style.width = '100%';
+        btn2.onclick = function() { google.script.host.close(); };
+
+        btnBox.appendChild(btn1);
+        btnBox.appendChild(btn2);
+      }
+    }
+
+    // 修正錯誤列表，禁止顯示 literal `${escapeHtml(msg)}`
+    function showErrorState(msg) {
+      const statusTitle = document.getElementById('result-status');
+      statusTitle.textContent = '🔴 初始化設定失敗！';
+      statusTitle.style.color = '#c5221f';
+
+      const detailBox = document.getElementById('detail-box');
+      detailBox.style.display = 'block';
+
+      const errorsBox = document.getElementById('res-errors-box');
+      const errorsList = document.getElementById('res-errors-list');
+      errorsBox.style.display = 'block';
+
+      const li = document.createElement('li');
+      li.textContent = msg;
+      errorsList.replaceChildren(li);
+
+      const btnBox = document.getElementById('action-buttons-box');
+      btnBox.replaceChildren();
+      const btnClose = document.createElement('button');
+      btnClose.className = 'btn-secondary';
+      btnClose.textContent = '關閉視窗';
+      btnClose.style.width = '100%';
+      btnClose.onclick = function() { google.script.host.close(); };
+      btnBox.appendChild(btnClose);
+    }
+
+    function openTeacherWorkspaceAfterSetup() {
+      const btnBox = document.getElementById('action-buttons-box');
+      btnBox.innerHTML = '<p style="text-align:center; color:#5f6368;">正在啟動導師工作台，請稍候...</p>';
+
+      google.script.run
+        .withSuccessHandler(function() {
+          google.script.host.close();
+        })
+        .withFailureHandler(function(err) {
+          displayRecheckError("開啟工作台失敗：" + (err.message || "未知錯誤"));
+        })
+        .showTeacherWorkspace();
+    }
+
+    function recheckSystemStatus() {
+      const statusTitle = document.getElementById('result-status');
+      statusTitle.innerHTML = '🔄 正在重新檢查系統狀態...';
+      statusTitle.style.color = '#5f6368';
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          if (response.success) {
+            displaySetupResults({
+              setup: { success: true },
+              status: response.data
+            });
+          } else {
+            displayRecheckError(response.message || "重新校對失敗");
+          }
+        })
+        .withFailureHandler(function(err) {
+          displayRecheckError(err.message || "連線逾時");
+        })
+        .ajaxGetSystemStatus();
+    }
+
+    function displayRecheckError(msg) {
+      const errorsBox = document.getElementById('res-errors-box');
+      const errorsList = document.getElementById('res-errors-list');
+      errorsBox.style.display = 'block';
+      const li = document.createElement('li');
+      li.innerText = msg;
+      errorsList.appendChild(li);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
