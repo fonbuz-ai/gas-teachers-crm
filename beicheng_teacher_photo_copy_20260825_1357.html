@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>北成國小老師照片批量複製工具</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif; background: #e5ddd5; display: flex; height: 100vh; }
+.sidebar { width: 50px; background: #2c3e50; display: flex; flex-direction: column; align-items: center; padding: 10px 0; overflow-y: auto; flex-shrink: 0; }
+.sidebar button { width: 36px; height: 36px; border: none; border-radius: 50%; background: #34495e; color: #ecf0f1; font-size: 14px; cursor: pointer; margin: 3px 0; transition: all 0.2s; }
+.sidebar button:hover { background: #1abc9c; }
+.sidebar button.active { background: #e74c3c; color: white; }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.control-bar { background: #2c3e50; color: white; padding: 8px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.control-bar button { background: #34495e; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+.control-bar button:hover { background: #1abc9c; }
+.control-bar button.active { background: #1abc9c; }
+.control-bar .spacer { flex: 1; }
+.title-bar { background: #075e54; color: white; padding: 12px 16px; text-align: center; font-size: 18px; font-weight: bold; }
+#chatArea { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; font-size: 16px; }
+.message { display: flex; max-width: 80%; animation: fadeIn 0.3s; }
+.message[data-role="user"] { align-self: flex-start; }
+.message[data-role="ai"] { align-self: flex-end; }
+.bubble { border-radius: 12px; padding: 8px 12px; position: relative; width: fit-content; overflow-wrap: break-word; word-break: break-word; }
+.message[data-role="user"] .bubble { background: white; border: 1px solid #ddd; }
+.message[data-role="ai"] .bubble { background: #dcf8c6; border: 1px solid #b8d89e; }
+.bubble-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 8px; }
+.bubble-header .label { font-size: 0.6em; font-weight: bold; color: #666; }
+.bubble-header button { background: none; border: none; cursor: pointer; font-size: 0.9em; padding: 2px 6px; border-radius: 4px; color: #888; }
+.bubble-header button:hover { background: rgba(0,0,0,0.1); color: #333; }
+.bubble-content { line-height: 1.6; }
+.bubble-content pre { background: #f4f4f4; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 0.9em; margin: 4px 0; }
+.bubble-content code { background: #f4f4f4; padding: 1px 4px; border-radius: 3px; font-size: 0.9em; }
+.bubble-content table { border-collapse: collapse; margin: 4px 0; width: 100%; }
+.bubble-content th, .bubble-content td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; font-size: 0.9em; }
+.bubble-content th { background: #f0f0f0; }
+.bubble-content ul, .bubble-content ol { padding-left: 20px; margin: 4px 0; }
+.bubble-content a { color: #075e54; }
+.collapsed .bubble-content { overflow: hidden; max-height: 1.4em; text-overflow: ellipsis; }
+.collapsed .bubble-content *:not(:first-child) { display: none; }
+.collapsed .bubble-content::after { content: '...'; color: #999; }
+.message.highlight .bubble { background: #d4eaff !important; border-color: #7bb8e0 !important; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 768px) { .sidebar { display: none; } .message { max-width: 95%; } }
+</style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar"></div>
+
+<div class="main">
+  <div class="title-bar">北成國小老師照片批量複製工具</div>
+  <div class="control-bar">
+    <button class="filter-btn active" data-filter="all">全部</button>
+    <button class="filter-btn" data-filter="user">只看我</button>
+    <button class="filter-btn" data-filter="ai">只看 AI</button>
+    <div class="spacer"></div>
+    <button onclick="expandAll()">全部展開</button>
+    <button onclick="collapseAll()">全部收合</button>
+    <button onclick="changeFontSize(-1)">A-</button>
+    <button onclick="changeFontSize(1)">A+</button>
+  </div>
+  <div id="chatArea"></div>
+</div>
+
+<script>
+const conversation = [
+    { role: 'user', id: 1, content: '讀取這個"D:\\115學年度學務主任資料\\學校資料\\北成國小115學年度職務編配0715.xlsx"檔案中的所有老師的姓名，再到資料夾"D:\\105學務處--俊欽\\教師節"去找出相對應的照片(重複的姓名就捉一次就好不必重複捉取)，複製到"D:\\115學年度學務主任資料\\學校資料\\全校老師照片"資料夾中' },
+    { role: 'ai', id: 1, content: '## 分析結果\n\n| 項目 | 詳情 |\n|------|------|\n| **Excel 檔案** | 1 個工作表 "115"，42 行 × 12 列，姓名在 B/D/F/H/J/L 欄 |\n| **唯一名稱數** | 約 167 位老師 |\n| **照片資料夾** | 多個年份子資料夾，照片格式為 `.jpg/.JPG/.PNG/.BMP` |\n| **命名慣例** | 檔名包含姓名，如 `體育組長--劉政輝.JPG`、`308黃金盛.JPG` |\n\n### 執行計畫\n\n1. **讀取 Excel** — 用 `ImportExcel` 模組讀取 xlsx，從 B/D/F/H/J/L 欄提取所有姓名，去重複\n2. **掃描照片資料夾** — 遞迴搜尋 `D:\\105學務處--俊欽\\教師節` 下所有 `.jpg`、`.JPG`、`.JPEG`、`.png`、`.bmp` 檔案\n3. **姓名比對** — 用子字串比對（老師姓名包含在檔名中），每位老師只取第一張找到的照片\n4. **建立目的地資料夾** — `D:\\115學年度學務主任資料\\學校資料\\全校老師照片`（如不存在則建立）\n5. **複製照片** — 將匹配的照片複製到目的地' },
+    { role: 'user', id: 2, content: '開始執行' },
+    { role: 'ai', id: 2, content: '## 完成！\n\n所有照片已複製到 `D:\\115學年度學務主任資料\\學校資料\\全校老師照片`\n\n### 統計結果\n\n| 項目 | 數量 |\n|------|------|\n| Excel 中提取的老師/職稱 | 175 |\n| 成功匹配並複製 | **163** |\n| 未找到照片 | 12 |\n\n### 未找到照片的名單\n\n- 伍舒苗、何劭葳、周鈺婷、林正君、林芝妤、林柏豪、陳穎萱、黃婕瑄、劉梓耘、藍秀美\n\n### 注意事項\n\n1. 部分「職稱」也被匹配（如 人事主任、文書組、出納組 等），因為照片檔名中包含職稱\n2. 同一位老師有多張照片時，取的是搜尋順序中找到的第一張\n3. 有 1 個 `.pcl` 印表機檔案也被複製進來（`蘇千惠李綉媚.pcl`），如不需要可手動刪除\n4. 目的地資料夾共 **165 個檔案**（含 1 個 .pcl）' },
+    { role: 'user', id: 3, content: '將對話整理成html檔' }
+];
+
+// Sensitive info masking
+function maskSensitive(text) {
+    return text;
+}
+
+// State
+var fontSize = 16;
+var sidebarBtns = [];
+
+function init() {
+    var chatArea = document.getElementById('chatArea');
+    var sidebar = document.getElementById('sidebar');
+    var userCount = 0;
+    
+    conversation.forEach(function(msg, i) {
+        if (msg.role === 'user') userCount++;
+        var div = document.createElement('div');
+        div.className = 'message';
+        div.setAttribute('data-role', msg.role);
+        div.setAttribute('data-user-index', userCount);
+        div.id = 'msg-' + i;
+        
+        var label = msg.role === 'user' ? '我' : 'AI';
+        var num = msg.role === 'user' ? userCount : userCount;
+        
+        div.innerHTML = '<div class="bubble"><div class="bubble-header"><span class="label">' + label + ' (' + num + ')</span><div><button onclick="copyMsg(' + i + ')" title="複製">\ud83d\udccb</button><button onclick="toggleCollapse(' + i + ')" id="toggle-' + i + '" title="展開/收合">▼</button></div></div><div class="bubble-content">' + renderMarkdown(msg.content) + '</div></div>';
+        chatArea.appendChild(div);
+    });
+    
+    // Sidebar buttons
+    var userIndex = 0;
+    for (var i = 0; i < conversation.length; i++) {
+        if (conversation[i].role === 'user') {
+            userIndex++;
+            var btn = document.createElement('button');
+            btn.textContent = userIndex;
+            btn.setAttribute('data-target', 'msg-' + i);
+            btn.onclick = (function(idx) {
+                return function() { document.getElementById('msg-' + idx).scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+            })(i);
+            sidebar.appendChild(btn);
+            sidebarBtns.push(btn);
+        }
+    }
+    
+    // Scroll sync
+    chatArea.addEventListener('scroll', syncSidebar);
+    
+    // Filter buttons
+    document.querySelectorAll('.filter-btn').forEach(function(btn) {
+        btn.onclick = function() {
+            document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            var filter = btn.getAttribute('data-filter');
+            document.querySelectorAll('.message').forEach(function(m) {
+                if (filter === 'all') { m.style.display = ''; }
+                else if (filter === 'user') { m.style.display = m.getAttribute('data-role') === 'user' ? '' : 'none'; }
+                else if (filter === 'ai') { m.style.display = m.getAttribute('data-role') === 'ai' ? '' : 'none'; }
+            });
+        };
+    });
+}
+
+function renderMarkdown(text) {
+    var html = text;
+    // Code blocks
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+    // Inline code
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Bold
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Headers
+    html = html.replace(/^### (.+)$/gm, '<strong style="font-size:1.1em">$1</strong>');
+    html = html.replace(/^## (.+)$/gm, '<strong style="font-size:1.2em">$1</strong>');
+    // Table
+    html = html.replace(/\|(.+)\|\n\|[-| ]+\|\n((?:\|.+\|\n?)*)/g, function(match, header, body) {
+        var ths = header.split('|').filter(function(c) { return c.trim(); }).map(function(c) { return '<th>' + c.trim() + '</th>'; }).join('');
+        var rows = body.trim().split('\n').map(function(row) {
+            var tds = row.split('|').filter(function(c) { return c.trim(); }).map(function(c) { return '<td>' + c.trim() + '</td>'; }).join('');
+            return '<tr>' + tds + '</tr>';
+        }).join('');
+        return '<table><thead><tr>' + ths + '</tr></thead><tbody>' + rows + '</tbody></table>';
+    });
+    // List items
+    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, function(match) { return '<ul>' + match + '</ul>'; });
+    // Line breaks
+    html = html.replace(/\n/g, '<br>');
+    return html;
+}
+
+function copyMsg(idx) {
+    var text = conversation[idx].content;
+    navigator.clipboard.writeText(text).then(function() { alert('已複製！'); });
+}
+
+function toggleCollapse(idx) {
+    var msg = document.getElementById('msg-' + idx);
+    var btn = document.getElementById('toggle-' + idx);
+    if (msg.classList.contains('collapsed')) {
+        msg.classList.remove('collapsed');
+        btn.textContent = '▼';
+    } else {
+        msg.classList.add('collapsed');
+        btn.textContent = '▶';
+    }
+}
+
+function expandAll() {
+    document.querySelectorAll('.message').forEach(function(m) { m.classList.remove('collapsed'); });
+}
+
+function collapseAll() {
+    document.querySelectorAll('.message').forEach(function(m) { m.classList.add('collapsed'); });
+}
+
+function changeFontSize(delta) {
+    fontSize = Math.max(12, Math.min(24, fontSize + delta * 2));
+    document.getElementById('chatArea').style.fontSize = fontSize + 'px';
+}
+
+function syncSidebar() {
+    var chatArea = document.getElementById('chatArea');
+    var userMsgs = chatArea.querySelectorAll('.message[data-role="user"]');
+    var bestIdx = -1, bestDist = Infinity;
+    userMsgs.forEach(function(msg) {
+        var rect = msg.getBoundingClientRect();
+        var chatRect = chatArea.getBoundingClientRect();
+        var dist = Math.abs(rect.top - chatRect.top - 20);
+        if (dist < bestDist) { bestDist = dist; bestIdx = Array.from(userMsgs).indexOf(msg); }
+    });
+    sidebarBtns.forEach(function(b, i) { b.classList.toggle('active', i === bestIdx); });
+    userMsgs.forEach(function(m, i) { m.classList.toggle('highlight', i === bestIdx); });
+}
+
+init();
+</script>
+
+</body>
+</html>
